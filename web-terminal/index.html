@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Terminal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body style="width: 100vw; height: 100vh; overflow: hidden">
+    <div class="shell" id="shell" onclick="document.querySelector('.terminal-input').focus()">
+    <div class="lines"></div>
+    <div class="current-line">
+      <p><span class="terminal-text">you@computer:~</span>$&nbsp;</p>
+      <input class="terminal-input" type="text" />
+    </div>
+  </div>
+
+<script src="scripts/commands.js"></script>
+<script src="scripts/navigation.js"></script>
+<script src="scripts/main.js"></script>
+</body>
+</html>
