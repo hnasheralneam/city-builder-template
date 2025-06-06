@@ -32,38 +32,35 @@ document.addEventListener("mousemove", (event) => {
    }
 });
 document.querySelector(".grid").addEventListener("mousedown", () => {
+   if (!activeCell || moving) return;
    let i = activeCell.position.x;
    let j = activeCell.position.y;
-   if (moving) return;
    if (!grid[i][j]["filled"]) return;
-   let clickedAt = Date.now();
-   heldInterval = setInterval(() => {
-      if (Date.now() - clickedAt > 600) {
-         clearInterval(heldInterval);
-         moving = true;
-         lastPos = [i, j];
-         activeBuilding = grid[i][j]["building"];
+   heldInterval = setTimeout(() => {
+      if (!activeCell) return;
+      console.log("start moving")
+      clearTimeout(heldInterval);
+      moving = true;
+      lastPos = [i, j];
+      activeBuilding = grid[i][j]["building"];
 
-         let firstCellOfBuildingPosition = getBuildingTopLeftPosition();
-         cellOffsetX = i - firstCellOfBuildingPosition.x;
-         cellOffsetY = j - firstCellOfBuildingPosition.y;
+      let firstCellOfBuildingPosition = getBuildingTopLeftPosition();
+      cellOffsetX = i - firstCellOfBuildingPosition.x;
+      cellOffsetY = j - firstCellOfBuildingPosition.y;
 
-         // image overlays
-         removeBuilding(activeCell.building);
-         updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth(), true);
-      }
-   }, 200);
+      // image overlays
+      removeBuilding(activeBuilding);
+      updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth());
+   }, 800);
 });
 document.querySelector(".grid").addEventListener("mouseup", () => {
    if (moving) cancelMove();
-   clearInterval(heldInterval);
+   clearTimeout(heldInterval);
 });
 
 // functions
 function generateGrid() {
-   if (gridEl) {
-      gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
-   }
+   if (gridEl) gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
    for (let i = 0; i < ROWS; i++) {
       grid[i] = [];
       for (let j = 0; j < COLS; j++) {
@@ -91,9 +88,7 @@ function addTracking(i, j) {
 
    cell.addEventListener("mouseover", (e) => {
       activeCell = cellObj;
-      if (moving) {
-         updateArea(i, j, activeBuilding.getHeight(), activeBuilding.getWidth(), true);
-      }
+      if (moving) updateArea(i, j, activeBuilding.getHeight(), activeBuilding.getWidth());
    });
    cell.addEventListener("mouseout", () => {
       if (activeBuilding)
@@ -114,18 +109,19 @@ function cancelMove() {
    if (activeCell) {
       if (canPlaceBuilding(activeBuilding, { x: i, y: j })) {
          placeBuilding(activeBuilding, { x: i, y: j });
-         updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth(), false);
+         updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth());
       } else returnToCurrentPosition();
    }
    else returnToCurrentPosition();
 
    function returnToCurrentPosition() {
       placeBuilding(activeBuilding, { x: lastPos[0], y: lastPos[1] });
-      updateArea(lastPos[0] + cellOffsetX, lastPos[1] + cellOffsetY, activeBuilding.getHeight(), activeBuilding.getWidth(), false);
+      updateArea(lastPos[0] + cellOffsetX, lastPos[1] + cellOffsetY, activeBuilding.getHeight(), activeBuilding.getWidth());
    }
    cellOffsetX = 0;
    cellOffsetY = 0;
    moving = false;
+   clearPreview();
 }
 
 function getBuildingTopLeftPosition() {
@@ -148,13 +144,8 @@ function removeBuilding(buildingId) {
    });
 }
 
-function updateArea(activeX, activeY, height, width, preview = false) {
-   document.querySelectorAll(".preview-full").forEach((element) => {
-      element.classList.remove("preview-full");
-   });
-   document.querySelectorAll(".preview-empty").forEach((element) => {
-      element.classList.remove("preview-empty");
-   });
+function updateArea(activeX, activeY, height, width) {
+   clearPreview();
 
    let buildingPosX = activeX - cellOffsetX;
    let buildingPosY = activeY - cellOffsetY;
@@ -167,13 +158,22 @@ function updateArea(activeX, activeY, height, width, preview = false) {
 
             if (grid[i][j]["filled"]) {
                cell.classList.add("full");
-               if (preview) cell.classList.add("preview-full");
+               if (moving) cell.classList.add("preview-full");
             } else {
-               if (preview) cell.classList.add("preview-empty");
+               if (moving) cell.classList.add("preview-empty");
             }
          }
       }
    }
+}
+
+function clearPreview() {
+   document.querySelectorAll(".preview-full").forEach((element) => {
+      element.classList.remove("preview-full");
+   });
+   document.querySelectorAll(".preview-empty").forEach((element) => {
+      element.classList.remove("preview-empty");
+   });
 }
 
 function canPlaceBuilding(building, position) {
