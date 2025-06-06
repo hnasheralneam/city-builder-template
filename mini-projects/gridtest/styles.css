@@ -1,0 +1,52 @@
+* {
+   padding: 0;
+   margin: 0;
+   box-sizing: border-box;
+}
+
+.grid-parent {
+   height: 100vh;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+}
+
+.grid {
+   transform: scale(.6);
+   display: inline-grid;
+}
+
+.box {
+   display: inline-block;
+   width: 60px;
+   height: 60px;
+   background-color: #eee;
+   border: solid 1px #666;
+}
+
+.full {
+   background-color: #aaa;
+}
+
+.preview-full {
+   background-color: #ff0000;
+}
+
+.preview-empty {
+   background-color: #44ff00;
+}
+
+.grid-controls {
+   position: absolute;
+   bottom: 0;
+   right: 0;
+   margin: 5px;
+}
+
+.grid-controls button {
+   height: 35px;
+   width: 35px;
+   font-size: 1.2rem;
+   background: #ddd;
+   border: none;
+}
