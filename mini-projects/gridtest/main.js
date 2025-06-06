@@ -1,7 +1,6 @@
-const ROWS = 16;
-const COLS = 16;
+const ROWS = 15;
+const COLS = 15;
 let grid = [];
-let preview = document.querySelector(".cursor-preview");
 let gridEl = document.querySelector(".grid");
 let moving = false;
 let heldInterval;
@@ -10,27 +9,43 @@ let activeBuilding;
 let activeCell;
 let cellOffsetX = 0;
 let cellOffsetY = 0;
+let imagePreviewElement;
 
 generateGrid();
+createImagePreviewElement();
 placeBuilding({
-   name: "test",
-   height: 3,
-   width: 4,
-   getHeight() {
-      return this.height;
-   },
-   getWidth() {
-      return this.width;
-   }
-}, { x: 3, y: 3 });
+   name: "fountain",
+   image: "fountain.png",
+   height: 2,
+   width: 3,
+}, { x: 4, y: 5 });
+placeBuilding({
+   name: "fertilizer",
+   image: "fertilizer.png",
+   height: 2,
+   width: 2,
+}, { x: 8, y: 4 });
+placeBuilding({
+   name: "empty-plot",
+   image: "plot.png",
+   height: 5,
+   width: 5,
+}, { x: 8, y: 10 });
+placeBuilding({
+   name: "empty-plot",
+   image: "plot.png",
+   height: 5,
+   width: 5,
+}, { x: 9, y: 10 });
+placeBuilding({
+   name: "empty-plot",
+   image: "plot.png",
+   height: 5,
+   width: 5,
+}, { x: 10, y: 10 });
+
 
 // listeners
-document.addEventListener("mousemove", (event) => {
-   if (preview) {
-      preview.style.left = `${event.clientX}px`;
-      preview.style.top = `${event.clientY}px`;
-   }
-});
 document.querySelector(".grid").addEventListener("mousedown", () => {
    if (!activeCell || moving) return;
    let i = activeCell.position.x;
@@ -38,7 +53,6 @@ document.querySelector(".grid").addEventListener("mousedown", () => {
    if (!grid[i][j]["filled"]) return;
    heldInterval = setTimeout(() => {
       if (!activeCell) return;
-      console.log("start moving")
       clearTimeout(heldInterval);
       moving = true;
       lastPos = [i, j];
@@ -48,12 +62,13 @@ document.querySelector(".grid").addEventListener("mousedown", () => {
       cellOffsetX = i - firstCellOfBuildingPosition.x;
       cellOffsetY = j - firstCellOfBuildingPosition.y;
 
-      // image overlays
+      document.querySelector(":root").style.setProperty("--building-opacity", ".4")
       removeBuilding(activeBuilding);
-      updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth());
-   }, 800);
+      updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.height, activeBuilding.width);
+   }, 650);
 });
 document.querySelector(".grid").addEventListener("mouseup", () => {
+   imagePreviewElement.remove();
    if (moving) cancelMove();
    clearTimeout(heldInterval);
 });
@@ -82,18 +97,26 @@ function generateGrid() {
    let breakEl = document.createElement("br");
    gridEl === null || gridEl === void 0 ? void 0 : gridEl.appendChild(breakEl);
 }
+function createImagePreviewElement() {
+   imagePreviewElement = document.createElement("img");
+   imagePreviewElement.style.opacity = "var(--building-opacity)";
+   imagePreviewElement.style.pointerEvents = "none";
+   imagePreviewElement.style.position = "absolute";
+   imagePreviewElement.style.right = "0";
+   imagePreviewElement.style.bottom = "0";
+}
 function addTracking(i, j) {
    let cellObj = grid[i][j];
    let cell = cellObj.element;
 
-   cell.addEventListener("mouseover", (e) => {
+   cell.addEventListener("mouseover", () => {
       activeCell = cellObj;
-      if (moving) updateArea(i, j, activeBuilding.getHeight(), activeBuilding.getWidth());
+      if (moving) updateArea(i, j, activeBuilding.height, activeBuilding.width);
    });
    cell.addEventListener("mouseout", () => {
       if (activeBuilding)
-         for (let row = i; row < i + activeBuilding.getHeight(); row++)
-            for (let col = j; col < j + activeBuilding.getWidth(); col++)
+         for (let row = i; row < i + activeBuilding.height; row++)
+            for (let col = j; col < j + activeBuilding.width; col++)
                if (row < ROWS && col < COLS) {
                   grid[row][col]["element"].classList.remove("preview-full");
                   grid[row][col]["element"].classList.remove("preview-empty");
@@ -109,19 +132,21 @@ function cancelMove() {
    if (activeCell) {
       if (canPlaceBuilding(activeBuilding, { x: i, y: j })) {
          placeBuilding(activeBuilding, { x: i, y: j });
-         updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.getHeight(), activeBuilding.getWidth());
+         updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.height, activeBuilding.width);
       } else returnToCurrentPosition();
    }
    else returnToCurrentPosition();
 
    function returnToCurrentPosition() {
       placeBuilding(activeBuilding, { x: lastPos[0], y: lastPos[1] });
-      updateArea(lastPos[0] + cellOffsetX, lastPos[1] + cellOffsetY, activeBuilding.getHeight(), activeBuilding.getWidth());
+      updateArea(lastPos[0] + cellOffsetX, lastPos[1] + cellOffsetY, activeBuilding.height, activeBuilding.width);
    }
    cellOffsetX = 0;
    cellOffsetY = 0;
    moving = false;
+   document.querySelector(":root").style.setProperty("--building-opacity", "1")
    clearPreview();
+   imagePreviewElement.remove();
 }
 
 function getBuildingTopLeftPosition() {
@@ -144,27 +169,33 @@ function removeBuilding(buildingId) {
    });
 }
 
+
 function updateArea(activeX, activeY, height, width) {
    clearPreview();
 
    let buildingPosX = activeX - cellOffsetX;
    let buildingPosY = activeY - cellOffsetY;
 
+   let lastItem;
    for (let i = buildingPosX; i < buildingPosX + height; i++) {
       for (let j = buildingPosY; j < buildingPosY + width; j++) {
-         if (i < ROWS && j < COLS && i >= 0 && j >= 0) {
-            const cell = grid[i][j]["element"];
-            cell.classList.remove("full", "preview-full", "preview-empty");
+         if (!grid[i] || !grid[i][j]) continue;
+         const cell = grid[i][j]["element"];
+         cell.classList.remove("full", "preview-full", "preview-empty");
 
-            if (grid[i][j]["filled"]) {
-               cell.classList.add("full");
-               if (moving) cell.classList.add("preview-full");
-            } else {
-               if (moving) cell.classList.add("preview-empty");
-            }
+         if (grid[i][j]["filled"]) {
+            cell.classList.add("full");
+            if (moving) cell.classList.add("preview-full");
+         } else {
+            if (moving) cell.classList.add("preview-empty");
          }
+         lastItem = grid[i][j];
       }
    }
+   lastItem.element.appendChild(imagePreviewElement);
+   imagePreviewElement.src = activeBuilding.image;
+   let cellSideLength = document.querySelector(".grid").firstElementChild.offsetWidth;
+   imagePreviewElement.style.width = cellSideLength * activeBuilding.width + "px";
 }
 
 function clearPreview() {
@@ -181,13 +212,13 @@ function canPlaceBuilding(building, position) {
    let buildingPosY = position.y - cellOffsetY;
 
    if (buildingPosX < 0 || buildingPosY < 0 ||
-      buildingPosX + building.getHeight() > ROWS ||
-      buildingPosY + building.getWidth() > COLS) {
+      buildingPosX + building.height > ROWS ||
+      buildingPosY + building.width > COLS) {
       return false;
    }
 
-   for (let i = buildingPosX; i < buildingPosX + building.getHeight(); i++) {
-      for (let j = buildingPosY; j < buildingPosY + building.getWidth(); j++) {
+   for (let i = buildingPosX; i < buildingPosX + building.height; i++) {
+      for (let j = buildingPosY; j < buildingPosY + building.width; j++) {
          if (grid[i][j]["filled"]) return false;
       }
    }
@@ -197,13 +228,30 @@ function placeBuilding(building, position) {
    let buildingPosX = position.x - cellOffsetX;
    let buildingPosY = position.y - cellOffsetY;
 
-   for (let i = buildingPosX; i < buildingPosX + building.getHeight(); i++) {
-      for (let j = buildingPosY; j < buildingPosY + building.getWidth(); j++) {
+   let lastItem;
+   for (let i = buildingPosX; i < buildingPosX + building.height; i++) {
+      for (let j = buildingPosY; j < buildingPosY + building.width; j++) {
          grid[i][j]["filled"] = true;
          grid[i][j]["element"].classList.add("full");
          grid[i][j]["building"] = building;
+         lastItem = grid[i][j];
       }
    }
+   let buildingImage = lastItem.building.imageElement;
+   if (!buildingImage) {
+      buildingImage = document.createElement("img");
+      buildingImage.style.opacity = "var(--building-opacity)";
+      buildingImage.style.pointerEvents = "none";
+      buildingImage.style.position = "absolute";
+      buildingImage.style.right = "0";
+      buildingImage.style.bottom = "0";
+      lastItem.building.imageElement = buildingImage;
+   }
+   buildingImage.src = lastItem.building.image;
+   let cellSideLength = document.querySelector(".grid").firstElementChild.offsetWidth;
+   buildingImage.style.width = cellSideLength * lastItem.building.width + "px";
+   lastItem.element.style.position = "relative";
+   lastItem.element.append(buildingImage);
 }
 
 // zoom

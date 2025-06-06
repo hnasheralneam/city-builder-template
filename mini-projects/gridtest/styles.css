@@ -17,6 +17,7 @@
 }
 
 .box {
+   position: relative;
    display: inline-block;
    width: 60px;
    height: 60px;
@@ -49,4 +50,12 @@
    font-size: 1.2rem;
    background: #ddd;
    border: none;
+}
+
+.grid ::-moz-selection {
+   background: transparent;
+}
+
+.grid ::selection {
+   background: transparent;
 }
