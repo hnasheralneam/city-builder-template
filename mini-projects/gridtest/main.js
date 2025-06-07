@@ -11,39 +11,179 @@ let cellOffsetX = 0;
 let cellOffsetY = 0;
 let imagePreviewElement;
 
+let buildings = {
+   fountain: {
+      handle: "fountain",
+      name: "Fountain",
+      image: "fountain.png",
+      height: 2,
+      width: 3,
+   },
+   fertilizer: {
+      handle: "fertilizer",
+      name: "Fertilizer Bag",
+      image: "fertilizer.png",
+      height: 2,
+      width: 2,
+   },
+   plot: {
+      handle: "plot",
+      name: "Plot",
+      image: "plot.png",
+      height: 5,
+      width: 5,
+   },
+   bush: {
+      handle: "bush",
+      name: "Shrubbery",
+      image: "bush.png",
+      height: 1,
+      width: 3
+   },
+   tree: {
+      handle: "tree",
+      name: "Decorative Tree",
+      image: "tree.png",
+      height: 2,
+      width: 4
+   }
+}
+
+let inventory;
+let gridBuildings;
+// let inventory = [
+//    ["plot", 2],
+//    ["fertilizer", 2],
+//    ["fountain", 2],
+//    ["bush", 4],
+//    ["tree", 1]
+// ];
+
+
+const SaveManager = {
+   decrementInventoryItem(handle) {
+      let itemIndex = inventory.findIndex((arr) => arr[0] == handle);
+      inventory[itemIndex][1]--;
+      if (inventory[itemIndex][1] === 0) inventory.splice(itemIndex, 1);
+
+      localStorage.setItem("citybuilder-inventory", JSON.stringify(inventory));
+   },
+   incrementInventoryItem(handle) {
+      let itemIndex = inventory.findIndex((arr) => arr[0] == handle);
+      if (itemIndex != -1) inventory[itemIndex][1]++;
+      else inventory.push([handle, 1]);
+      localStorage.setItem("citybuilder-inventory", JSON.stringify(inventory));
+   },
+   loadInventory() {
+      let savedInventory = localStorage.getItem("citybuilder-inventory");
+      if (savedInventory) inventory = JSON.parse(savedInventory);
+      else {
+         inventory = [
+            ["plot", 2],
+            ["fertilizer", 2],
+            ["fountain", 2],
+            ["bush", 4],
+            ["tree", 1]
+         ];
+      }
+      return inventory;
+   },
+
+   addGridItem(handle, id, position) {
+      gridBuildings.push({ handle, id, position });
+      localStorage.setItem("citybuilder-grid", JSON.stringify(gridBuildings));
+   },
+   moveGridItem(id, newPosition) {
+      let itemIndex = gridBuildings.findIndex((arr) => arr.id == id);
+      gridBuildings[itemIndex].position = newPosition;
+      localStorage.setItem("citybuilder-grid", JSON.stringify(gridBuildings));
+   },
+   removeGridItem(id) {
+      gridBuildings = gridBuildings.filter(item => { item.id != id });
+      localStorage.setItem("citybuilder-grid", JSON.stringify(gridBuildings));
+   },
+   loadGrid() {
+      let savedGrid = localStorage.getItem("citybuilder-grid");
+      if (savedGrid) gridBuildings = JSON.parse(savedGrid);
+      else {
+         gridBuildings = [];
+      }
+      console.log(gridBuildings)
+      return gridBuildings;
+   }
+};
+
 generateGrid();
 createImagePreviewElement();
-placeBuilding({
-   name: "fountain",
-   image: "fountain.png",
-   height: 2,
-   width: 3,
-}, { x: 4, y: 5 });
-placeBuilding({
-   name: "fertilizer",
-   image: "fertilizer.png",
-   height: 2,
-   width: 2,
-}, { x: 8, y: 4 });
-placeBuilding({
-   name: "empty-plot",
-   image: "plot.png",
-   height: 5,
-   width: 5,
-}, { x: 8, y: 10 });
-placeBuilding({
-   name: "empty-plot",
-   image: "plot.png",
-   height: 5,
-   width: 5,
-}, { x: 9, y: 10 });
-placeBuilding({
-   name: "empty-plot",
-   image: "plot.png",
-   height: 5,
-   width: 5,
-}, { x: 10, y: 10 });
 
+document.querySelector(".inventory-parent").addEventListener("mouseup", () => {
+   if (moving) {
+      moving = false;
+      activeBuilding.imageElement.remove();
+      SaveManager.incrementInventoryItem(activeBuilding.handle);
+      SaveManager.removeGridItem(activeBuilding.id);
+      postMoveCleanup();
+      populateInventoryElements();
+   }
+});
+
+function findPlaceForBuilding(building)  {
+   for (let i = 0; i < ROWS; i++)
+      for (let j = 0; j < COLS; j++)
+         if (canPlaceBuilding(building, { x: i, y: j }))
+            return { x: i, y: j };
+   return { x: -1, y: -1 };
+}
+
+async function init() {
+   await SaveManager.loadInventory();
+   populateInventoryElements();
+   await SaveManager.loadGrid();
+   populateGridBuildings();
+}
+init();
+
+function populateInventoryElements() {
+   console.log("populating inventory")
+   let inventoryBox = document.querySelector(".inventory");
+   inventoryBox.innerHTML = "";
+   inventory.forEach((data) => {
+      let buildingId = data[0];
+      let quantity = data[1];
+      let building = buildings[buildingId];
+
+      let element = document.createElement("div");
+      element.classList.add("inventory-item");
+      element.innerHTML = `
+         <img src="${building.image}">
+         <p>${building.name}</p>
+         <p>${building.height}x${building.width}</p>
+         <p>quantity ${quantity}</p>
+      `;
+      element.addEventListener("click", () => {
+         let position = findPlaceForBuilding(building);
+         if (position.x === -1) {
+            alert("no space! clear up the board first");
+            return;
+         }
+         let newBuilding = structuredClone(building);
+         newBuilding.id = window.crypto.randomUUID();
+         placeBuilding(newBuilding, position);
+         SaveManager.decrementInventoryItem(building.handle);
+         SaveManager.addGridItem(building.handle, newBuilding.id, position);
+         populateInventoryElements();
+      });
+      inventoryBox.appendChild(element);
+   });
+}
+function populateGridBuildings() {
+   gridBuildings.forEach((building) => {
+      let buildingData = buildings[building.handle];
+      let newBuilding = structuredClone(buildingData);
+      newBuilding.id = building.id;
+      placeBuilding(newBuilding, building.position);
+   });
+}
 
 // listeners
 document.querySelector(".grid").addEventListener("mousedown", () => {
@@ -67,7 +207,7 @@ document.querySelector(".grid").addEventListener("mousedown", () => {
       updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.height, activeBuilding.width);
    }, 650);
 });
-document.querySelector(".grid").addEventListener("mouseup", () => {
+document.body.addEventListener("mouseup", () => {
    imagePreviewElement.remove();
    if (moving) cancelMove();
    clearTimeout(heldInterval);
@@ -126,21 +266,27 @@ function addTracking(i, j) {
 }
 
 function cancelMove() {
-   if (!activeCell) return;
-   let i = activeCell.position.x;
-   let j = activeCell.position.y;
-   if (activeCell) {
+   if (!moving) return;
+   if (!activeCell) returnToCurrentPosition();
+   else {
+      let i = activeCell.position.x;
+      let j = activeCell.position.y;
       if (canPlaceBuilding(activeBuilding, { x: i, y: j })) {
          placeBuilding(activeBuilding, { x: i, y: j });
+         SaveManager.moveGridItem(activeBuilding.id, { x: i - cellOffsetX, y: j - cellOffsetY });
          updateArea(activeCell.position.x, activeCell.position.y, activeBuilding.height, activeBuilding.width);
       } else returnToCurrentPosition();
    }
-   else returnToCurrentPosition();
+
+   postMoveCleanup();
 
    function returnToCurrentPosition() {
       placeBuilding(activeBuilding, { x: lastPos[0], y: lastPos[1] });
       updateArea(lastPos[0] + cellOffsetX, lastPos[1] + cellOffsetY, activeBuilding.height, activeBuilding.width);
    }
+}
+
+function postMoveCleanup() {
    cellOffsetX = 0;
    cellOffsetY = 0;
    moving = false;

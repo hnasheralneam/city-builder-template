@@ -4,8 +4,37 @@
    box-sizing: border-box;
 }
 
+body {
+   display: grid;
+   grid-template-rows: 30vh 70vh;
+}
+
+.inventory-parent * {
+   -webkit-user-select: none;
+   user-select: none;
+}
+
+.inventory-parent {
+   height: 100%;
+   background-color: #eee;
+}
+
+.inventory-item {
+   display: inline-block;
+   background-color: #fff;
+   height: 20vh;
+   width: 20vh;
+   margin: 0 .5rem;
+   border-radius: .5rem;
+   text-align: center;
+}
+
+.inventory-item img {
+   height: 6.5rem;
+}
+
 .grid-parent {
-   height: 100vh;
+   height: 100%;
    display: flex;
    justify-content: center;
    align-items: center;
@@ -21,7 +50,7 @@
    display: inline-block;
    width: 60px;
    height: 60px;
-   background-color: #eee;
+   background-color: #eeeeee;
    border: solid 1px #666;
 }
 
